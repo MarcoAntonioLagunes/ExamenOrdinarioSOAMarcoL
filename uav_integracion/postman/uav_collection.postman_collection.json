@@ -1,0 +1,127 @@
+{
+  "info": {
+    "_postman_id": "uav-integration-collection-001",
+    "name": "UAV Integracion - APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Colección para probar la API REST de Cursos y el servicio SOAP de Alumnos. Configura el environment `UAV Local` con las URLs antes de usar."
+  },
+  "item": [
+    {
+      "name": "REST - Cursos",
+      "item": [
+        {
+          "name": "Ping (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{rest_url}}/ping",
+            "description": "Comprobar que el servicio REST está arriba"
+          }
+        },
+        {
+          "name": "Registrar Curso (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Prueba Postman\",\n  \"fechaInicio\": \"2025-12-10\",\n  \"profesor\": \"Prof. Postman\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{rest_url}}/registrar",
+            "description": "Registrar un nuevo curso"
+          }
+        },
+        {
+          "name": "Buscar Curso (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{rest_url}}/buscar?nombre=Prueba%20Postman",
+            "description": "Buscar un curso por nombre. Asegúrate de URL-encodear el nombre si contiene espacios"
+          }
+        },
+        {
+          "name": "Editar Curso (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Prueba Postman\",\n  \"fechaInicio\": \"2025-12-20\",\n  \"profesor\": \"Prof. Modificado\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{rest_url}}/editar",
+            "description": "Editar el curso (usa el mismo nombre para localizarlo)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "SOAP - Alumnos",
+      "item": [
+        {
+          "name": "Registrar Alumno (SOAP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"mx.uav.alumnos\">\n  <soapenv:Body>\n    <tns:registrar_alumno>\n      <tns:matricula>PRUEBA001</tns:matricula>\n      <tns:nombre>Alumno Postman</tns:nombre>\n      <tns:edad>21</tns:edad>\n      <tns:correo>postman@local</tns:correo>\n      <tns:telefono>5550001</tns:telefono>\n    </tns:registrar_alumno>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": "{{soap_url}}",
+            "description": "Envelope SOAP para registrar alumno (modifica matrícula si hace falta)"
+          }
+        },
+        {
+          "name": "Buscar Alumno (SOAP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"mx.uav.alumnos\">\n  <soapenv:Body>\n    <tns:buscar_alumno>\n      <tns:matricula>PRUEBA001</tns:matricula>\n    </tns:buscar_alumno>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": "{{soap_url}}",
+            "description": "Envelope SOAP para buscar alumno por matrícula"
+          }
+        },
+        {
+          "name": "Eliminar Alumno (SOAP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"mx.uav.alumnos\">\n  <soapenv:Body>\n    <tns:eliminar_alumno>\n      <tns:matricula>PRUEBA001</tns:matricula>\n    </tns:eliminar_alumno>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": "{{soap_url}}",
+            "description": "Envelope SOAP para eliminar alumno por matrícula"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [],
+        "type": "text/javascript"
+      }
+    }
+  ]
+}

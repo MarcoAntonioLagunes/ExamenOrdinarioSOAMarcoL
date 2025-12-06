@@ -1,0 +1,5 @@
+mx\uav\cursos\model\Curso.class
+mx\uav\cursos\UavCursosApplication.class
+mx\uav\cursos\controller\CursoController$CursoDto.class
+mx\uav\cursos\repository\CursoRepository.class
+mx\uav\cursos\controller\CursoController.class

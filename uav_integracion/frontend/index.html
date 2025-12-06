@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Plataforma Académica Unificada UAV</title>
+
+    <style>
+        body {
+            background-color: #0f1f33;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #08203c;
+            margin: 0;
+        }
+        .container {
+            width: 90%;
+            margin: 25px auto;
+            background-color: #112b45;
+            padding: 25px;
+            border-radius: 10px;
+        }
+        label { font-weight: bold; display: block; margin-top: 15px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primario { background-color: #00a2ff; }
+        .btn-primario:hover { background-color: #0086d4; }
+        .mensaje {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 18px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Plataforma Académica Unificada UAV</h1>
+
+<!-- =====================================================
+     ===============  SECCIÓN ALUMNOS (SOAP)  ==============
+     ===================================================== -->
+<div class="container">
+    <h2>Gestión de Alumnos (SOAP)</h2>
+
+    <label>Matrícula</label>
+    <input id="matricula">
+
+    <label>Nombre</label>
+    <input id="nombre">
+
+    <label>Edad</label>
+    <input id="edad">
+
+    <label>Correo</label>
+    <input id="correo">
+
+    <label>Teléfono</label>
+    <input id="telefono">
+
+    <button id="btn-registrar-alumno" class="btn-primario">Registrar Alumno</button>
+    <button id="btn-buscar-alumno" class="btn-primario">Buscar Alumno</button>
+    <button id="btn-eliminar-alumno" style="background-color:#c8102e; color:white;">Eliminar Alumno</button>
+
+    <div id="mensaje-alumnos" class="mensaje"></div>
+</div>
+
+<!-- =====================================================
+     ===============  SECCIÓN CURSOS (REST)  ==============
+     ===================================================== -->
+<div class="container">
+    <h2>Gestión de Cursos (REST)</h2>
+
+    <label>Nombre del Curso</label>
+    <input id="curso-nombre">
+
+    <label>Fecha Inicio (YYYY-MM-DD)</label>
+    <input id="curso-fecha">
+
+    <label>Profesor</label>
+    <input id="curso-profesor">
+
+    <button id="btn-registrar-curso" class="btn-primario">Registrar Curso</button>
+    <button id="btn-buscar-curso" class="btn-primario">Buscar Curso</button>
+    <button id="btn-editar-curso" class="btn-primario">Editar Curso</button>
+
+    <div id="mensaje-cursos" class="mensaje"></div>
+</div>
+
+
+<!-- =====================================================
+     ===============  SCRIPT COMPLETO FINAL  ===============
+     ===================================================== -->
+
+<script>
+/* =====================================================
+   CONFIGURACIÓN
+===================================================== */
+const SOAP_URL = "http://localhost:8000/soap";
+const REST_URL = "http://localhost:8080/api/cursos";
+
+/* =====================================================
+   UTILIDAD PARA MENSAJES
+===================================================== */
+function mensaje(id, texto, tipo){
+    const el = document.getElementById(id);
+    el.textContent = texto;
+    el.style.backgroundColor = tipo === "ok" ? "#00a651" : "#c8102e";
+}
+
+/* =====================================================
+   =============  FUNCIONES SOAP  ======================
+===================================================== */
+function soapRegistrarEnvelope(m, n, e, c, t){
+return `<?xml version="1.0"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:tns="mx.uav.alumnos">
+  <soapenv:Body>
+    <tns:registrar_alumno>
+      <tns:matricula>${m}</tns:matricula>
+      <tns:nombre>${n}</tns:nombre>
+      <tns:edad>${e}</tns:edad>
+      <tns:correo>${c}</tns:correo>
+      <tns:telefono>${t}</tns:telefono>
+    </tns:registrar_alumno>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+function soapBuscarEnvelope(m){
+return `<?xml version="1.0"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:tns="mx.uav.alumnos">
+  <soapenv:Body>
+    <tns:buscar_alumno>
+      <tns:matricula>${m}</tns:matricula>
+    </tns:buscar_alumno>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+function soapEliminarEnvelope(m){
+        return `<?xml version="1.0"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                                    xmlns:tns="mx.uav.alumnos">
+    <soapenv:Body>
+        <tns:eliminar_alumno>
+            <tns:matricula>${m}</tns:matricula>
+        </tns:eliminar_alumno>
+    </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+async function soapFetch(env){
+    const resp = await fetch(SOAP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/xml" },
+        body: env
+    });
+    const text = await resp.text();
+    if(!resp.ok){
+        // lanzamos un error con detalles para mostrar en la UI
+        throw new Error(`ERROR SOAP: ${resp.status} - ${text}`);
+    }
+    return text;
+}
+
+function parseSoapResult(xmlText){
+    const doc = new DOMParser().parseFromString(xmlText,"text/xml");
+
+    // Intentar etiquetas conocidas primero
+    const candidates = [
+        "return",
+        "buscar_alumnoResult",
+        "registrar_alumnoResult",
+        "eliminar_alumnoResult"
+    ];
+
+    for(const tag of candidates){
+        const el = doc.getElementsByTagName(tag)[0];
+        if(el && el.textContent && el.textContent.trim() !== "") return el.textContent.trim();
+    }
+
+    // Fallback: buscar el primer nodo de texto dentro del Body
+    const bodies = doc.getElementsByTagNameNS("http://schemas.xmlsoap.org/soap/envelope/","Body");
+    const body = bodies[0] || doc.getElementsByTagName("Body")[0];
+    if(body){
+        // buscar el primer elemento con texto
+        const els = body.getElementsByTagName("*");
+        for(const e of els){
+            if(e.textContent && e.textContent.trim() !== "") return e.textContent.trim();
+        }
+    }
+
+    return "";
+}
+
+/* Registrar alumno */
+async function registrarAlumno(){
+    const m = matricula.value.trim();
+    const n = nombre.value.trim();
+    const e = edad.value.trim();
+    const c = correo.value.trim();
+    const t = telefono.value.trim();
+
+    try{
+        const xml = soapRegistrarEnvelope(m,n,e,c,t);
+        await soapFetch(xml);
+        mensaje("mensaje-alumnos","Alumno registrado correctamente","ok");
+    }catch(err){
+        mensaje("mensaje-alumnos","Error al conectar SOAP","error");
+    }
+}
+
+/* Buscar alumno */
+async function buscarAlumno(){
+    const m = matricula.value.trim();
+
+    try{
+        const xml = soapBuscarEnvelope(m);
+        const resp = await soapFetch(xml);
+
+        // Parse XML y extraer resultado
+        const ret = parseSoapResult(resp);
+
+        if(ret === "NO_ENCONTRADO"){
+            mensaje("mensaje-alumnos","Alumno no encontrado","error");
+            return;
+        }
+
+        const p = ret.split("|");
+        matricula.value = p[0] || "";
+        nombre.value    = p[1] || "";
+        edad.value      = p[2] || "";
+        correo.value    = p[3] || "";
+        telefono.value  = p[4] || "";
+
+        mensaje("mensaje-alumnos","Alumno encontrado","ok");
+    }catch(err){
+        mensaje("mensaje-alumnos","Error al conectar SOAP","error");
+    }
+}
+
+/* Eliminar alumno */
+async function eliminarAlumno(){
+    const m = matricula.value.trim();
+    if(!m){
+        mensaje("mensaje-alumnos","Ingresa la matrícula del alumno a eliminar","error");
+        return;
+    }
+
+    try{
+        const xml = soapEliminarEnvelope(m);
+        const respText = await soapFetch(xml);
+
+        // Parse XML y extraer resultado
+        const ret = parseSoapResult(respText);
+
+        if(ret === "NO_ENCONTRADO"){
+            mensaje("mensaje-alumnos","Alumno no encontrado","error");
+            return;
+        }
+
+        if(ret === "ALUMNO_ELIMINADO" || ret.includes("registrado")){
+            mensaje("mensaje-alumnos","Alumno eliminado correctamente","ok");
+            // limpiar campos
+            matricula.value = "";
+            nombre.value = "";
+            edad.value = "";
+            correo.value = "";
+            telefono.value = "";
+            return;
+        }
+
+        mensaje("mensaje-alumnos","Respuesta SOAP: " + ret,"ok");
+    }catch(err){
+        mensaje("mensaje-alumnos","Error al conectar SOAP: " + err.message,"error");
+    }
+}
+
+/* EVENTOS SOAP */
+document.getElementById("btn-registrar-alumno").onclick = registrarAlumno;
+document.getElementById("btn-buscar-alumno").onclick = buscarAlumno;
+document.getElementById("btn-eliminar-alumno").onclick = eliminarAlumno;
+
+
+/* =====================================================
+   =============  FUNCIONES REST  ======================
+===================================================== */
+
+async function registrarCurso(){
+    const nombreEl = document.getElementById("curso-nombre");
+    const fechaEl = document.getElementById("curso-fecha");
+    const profEl = document.getElementById("curso-profesor");
+
+    const payload = {
+        nombre: nombreEl.value.trim(),
+        fechaInicio: fechaEl.value.trim(),
+        profesor: profEl.value.trim()
+    };
+
+    try{
+        const resp = await fetch(`${REST_URL}/registrar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if(!resp.ok){
+            const err = await resp.json().catch(() => ({}));
+            mensaje("mensaje-cursos", err.mensaje || `Error en API REST (${resp.status})`, "error");
+            return;
+        }
+
+        mensaje("mensaje-cursos","Curso registrado correctamente","ok");
+    }catch(err){
+        mensaje("mensaje-cursos","Error en API REST: " + err.message,"error");
+    }
+}
+
+async function buscarCurso(){
+    const nombre = document.getElementById("curso-nombre").value.trim();
+    if(!nombre){
+        mensaje("mensaje-cursos","Ingresa el nombre del curso a buscar","error");
+        return;
+    }
+
+    try{
+        const resp = await fetch(`${REST_URL}/buscar?nombre=${encodeURIComponent(nombre)}`);
+        if(resp.status === 404){
+            mensaje("mensaje-cursos","Curso no encontrado","error");
+            return;
+        }
+        if(!resp.ok){
+            mensaje("mensaje-cursos", `Error en API REST (${resp.status})`, "error");
+            return;
+        }
+
+        const data = await resp.json();
+        document.getElementById("curso-fecha").value = data.fechaInicio || "";
+        document.getElementById("curso-profesor").value = data.profesor || "";
+        mensaje("mensaje-cursos","Curso encontrado","ok");
+    }catch(err){
+        mensaje("mensaje-cursos","Error en API REST: " + err.message,"error");
+    }
+}
+
+async function editarCurso(){
+    const nombre = document.getElementById("curso-nombre").value.trim();
+    const fecha = document.getElementById("curso-fecha").value.trim();
+    const profesor = document.getElementById("curso-profesor").value.trim();
+
+    if(!nombre){
+        mensaje("mensaje-cursos","El nombre del curso es obligatorio para editar","error");
+        return;
+    }
+
+    const payload = {
+        nombre: nombre,
+        fechaInicio: fecha,
+        profesor: profesor
+    };
+
+    try{
+        const resp = await fetch(`${REST_URL}/editar`,{
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if(!resp.ok){
+            const err = await resp.json().catch(() => ({}));
+            mensaje("mensaje-cursos", err.mensaje || `Error en API REST (${resp.status})`, "error");
+            return;
+        }
+
+        mensaje("mensaje-cursos","Curso actualizado correctamente","ok");
+    }catch(err){
+        mensaje("mensaje-cursos","Error en API REST: " + err.message,"error");
+    }
+}
+
+/* EVENTOS REST */
+document.getElementById("btn-registrar-curso").onclick = registrarCurso;
+document.getElementById("btn-buscar-curso").onclick = buscarCurso;
+document.getElementById("btn-editar-curso").onclick = editarCurso;
+
+</script>
+
+</body>
+</html>
